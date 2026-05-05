@@ -158,10 +158,56 @@ const getMe = async (req, res) => {
   }
 };
 
+// const forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     const user = await User.findOne({ where: { email } }); //[cite: 7]
+
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ message: "Email không tồn tại trong hệ thống" });
+//     }
+
+//     // Tạo token ngẫu nhiên
+//     const resetToken = crypto.randomBytes(20).toString("hex");
+
+//     // Hash và lưu vào DB (Hạn 10 phút)
+//     user.reset_password_token = crypto
+//       .createHash("sha256")
+//       .update(resetToken)
+//       .digest("hex");
+//     user.reset_password_expires = Date.now() + 10 * 60 * 1000;
+
+//     await user.save();
+
+//     // Link dẫn tới trang Reset Password ở React (Port 3000)
+//     const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+//     const message = `Bạn nhận được email này vì bạn đã yêu cầu đặt lại mật khẩu. \n\n Vui lòng nhấn vào link bên dưới để thực hiện (Link có hiệu lực trong 10 phút): \n\n ${resetUrl}`;
+
+//     try {
+//       await sendEmail({
+//         email: user.email,
+//         subject: "Khôi phục mật khẩu - Cine Star",
+//         message,
+//       });
+//       res.status(200).json({ message: "Email khôi phục đã được gửi" });
+//     } catch (err) {
+//       user.reset_password_token = null;
+//       user.reset_password_expires = null;
+//       await user.save();
+//       return res.status(500).json({ message: "Không thể gửi email lúc này" });
+//     }
+//   } catch (err) {
+//     res.status(500).json({ message: "Lỗi server", error: err.message });
+//   }
+// };
+
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ where: { email } }); //[cite: 7]
+    const user = await User.findOne({ where: { email } });
 
     if (!user) {
       return res
@@ -169,22 +215,19 @@ const forgotPassword = async (req, res) => {
         .json({ message: "Email không tồn tại trong hệ thống" });
     }
 
-    // Tạo token ngẫu nhiên
+    // 1. Tạo mã reset đơn giản (20 ký tự)
     const resetToken = crypto.randomBytes(20).toString("hex");
 
-    // Hash và lưu vào DB (Hạn 10 phút)
-    user.reset_password_token = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
-    user.reset_password_expires = Date.now() + 10 * 60 * 1000;
+    // 2. Lưu trực tiếp vào DB (Đảm bảo tên cột khớp hoàn toàn với file User.js)
+    user.reset_password_token = resetToken;
+    user.reset_password_expires = new Date(Date.now() + 10 * 60 * 1000); // Chuyển về đối tượng Date
 
     await user.save();
 
-    // Link dẫn tới trang Reset Password ở React (Port 3000)
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+    // 3. Link dẫn về cổng 5173 của Vite/React
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
-    const message = `Bạn nhận được email này vì bạn đã yêu cầu đặt lại mật khẩu. \n\n Vui lòng nhấn vào link bên dưới để thực hiện (Link có hiệu lực trong 10 phút): \n\n ${resetUrl}`;
+    const message = `Bạn nhận được email này vì bạn đã yêu cầu đặt lại mật khẩu. \n\n Vui lòng nhấn vào link bên dưới để thực hiện (Mã có hiệu lực trong 10 phút): \n\n ${resetUrl}`;
 
     try {
       await sendEmail({
@@ -192,53 +235,90 @@ const forgotPassword = async (req, res) => {
         subject: "Khôi phục mật khẩu - Cine Star",
         message,
       });
-      res.status(200).json({ message: "Email khôi phục đã được gửi" });
+      res
+        .status(200)
+        .json({ message: "Email khôi phục đã được gửi thành công!" });
     } catch (err) {
       user.reset_password_token = null;
       user.reset_password_expires = null;
       await user.save();
-      return res.status(500).json({ message: "Không thể gửi email lúc này" });
+      return res
+        .status(500)
+        .json({ message: "Lỗi khi gửi email, vui lòng thử lại sau" });
     }
   } catch (err) {
+    console.error("LỖI FORGOT PASSWORD:", err); // Dòng này giúp bạn soi lỗi ở Terminal
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
 
 // 2. Đặt lại mật khẩu
+// const resetPassword = async (req, res) => {
+//   try {
+//     // Hash token nhận được để so khớp với DB
+//     const hashedToken = crypto
+//       .createHash("sha256")
+//       .update(req.params.token)
+//       .digest("hex");
+
+//     const user = await User.findOne({
+//       where: {
+//         reset_password_token: hashedToken,
+//         reset_password_expires: { [Op.gt]: Date.now() },
+//       },
+//     });
+
+//     if (!user) {
+//       return res
+//         .status(400)
+//         .json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+//     }
+
+//     // Mã hoá mật khẩu mới[cite: 7]
+//     user.password_hash = await bcrypt.hash(req.body.password, 10);
+//     user.reset_password_token = null;
+//     user.reset_password_expires = null;
+
+//     await user.save();
+
+//     res.status(200).json({ message: "Mật khẩu đã được thay đổi thành công" });
+//   } catch (err) {
+//     res.status(500).json({ message: "Lỗi server", error: err.message });
+//   }
+// };
+
 const resetPassword = async (req, res) => {
   try {
-    // Hash token nhận được để so khớp với DB
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(req.params.token)
-      .digest("hex");
+    const { token } = req.params; // Lấy token từ URL
+    const { password } = req.body;
 
     const user = await User.findOne({
       where: {
-        reset_password_token: hashedToken,
-        reset_password_expires: { [Op.gt]: Date.now() },
+        reset_password_token: token,
+        reset_password_expires: { [Op.gt]: new Date() }, // Kiểm tra còn hạn không
       },
     });
 
     if (!user) {
       return res
         .status(400)
-        .json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+        .json({ message: "Mã xác nhận không hợp lệ hoặc đã hết hạn" });
     }
 
-    // Mã hoá mật khẩu mới[cite: 7]
-    user.password_hash = await bcrypt.hash(req.body.password, 10);
+    // Mã hoá mật khẩu mới
+    user.password_hash = await bcrypt.hash(password, 10);
     user.reset_password_token = null;
     user.reset_password_expires = null;
 
     await user.save();
 
-    res.status(200).json({ message: "Mật khẩu đã được thay đổi thành công" });
+    res
+      .status(200)
+      .json({ message: "Đổi mật khẩu thành công! Hãy đăng nhập lại." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
-
 // Xác thực Email sau khi đăng ký
 const verifyEmail = async (req, res) => {
   try {
