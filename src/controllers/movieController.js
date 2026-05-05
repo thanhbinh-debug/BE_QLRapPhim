@@ -59,6 +59,9 @@ const createMovie = async (req, res) => {
       status,
       release_date,
       rating,
+      director,
+      cast,
+      country, // Nhận thêm dữ liệu
     } = req.body;
 
     const movie = await Movie.create({
@@ -71,6 +74,9 @@ const createMovie = async (req, res) => {
       status,
       release_date,
       rating,
+      director,
+      cast,
+      country, // Lưu vào DB
     });
 
     res.status(201).json({ message: "Thêm phim thành công", movie });

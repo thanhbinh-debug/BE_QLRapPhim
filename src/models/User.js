@@ -9,6 +9,10 @@ const User = sequelize.define(
     password_hash: { type: DataTypes.STRING(255), allowNull: false },
     phone: { type: DataTypes.STRING(20) },
     role: { type: DataTypes.ENUM("user", "admin"), defaultValue: "user" },
+    is_verified: { type: DataTypes.BOOLEAN, defaultValue: false },
+    email_token: { type: DataTypes.STRING(255) },
+    reset_password_token: { type: DataTypes.STRING(255) },
+    reset_password_expires: { type: DataTypes.DATE },
   },
   { tableName: "users", timestamps: true },
 );

@@ -1,4 +1,4 @@
-const { Showtime, Movie, Room } = require("../models");
+const { Showtime, Movie, Room, Seat } = require("../models");
 const { Op } = require("sequelize");
 
 // Lấy lịch chiếu — lọc theo phim và ngày
@@ -42,7 +42,17 @@ const getShowtimeById = async (req, res) => {
           model: Movie,
           attributes: ["id", "title", "poster", "duration", "genre"],
         },
-        { model: Room, attributes: ["id", "name", "screen_type", "capacity"] },
+        {
+          model: Room,
+          attributes: ["id", "name", "screen_type", "capacity"],
+          include: [
+            {
+              model: Seat, // Sử dụng trực tiếp Seat đã import ở trên[cite: 2]
+              as: "Seats",
+              attributes: ["id", "row", "number", "type","status"],
+            },
+          ],
+        },
       ],
     });
 

@@ -93,6 +93,15 @@ const createBooking = async (req, res) => {
 
     // 8. Gắn ghế vào booking (bảng booking_seats)
     await booking.addSeats(seats, { transaction: t });
+    //  CẬP NHẬT TRẠNG THÁI GHẾ THÀNH 'BOOKED' TRONG DATABASE
+    // Việc này giúp các người dùng khác không thể chọn lại ghế này nữa
+    await Seat.update(
+      { status: "booked" },
+      {
+        where: { id: seat_ids },
+        transaction: t,
+      },
+    );
 
     // 9. Gắn đồ ăn vào booking (bảng booking_foods)
     if (foodDetails.length > 0) {
@@ -190,12 +199,57 @@ const getBookingById = async (req, res) => {
 };
 
 // Huỷ vé
+// const cancelBooking = async (req, res) => {
+//   const t = await sequelize.transaction();
+//   try {
+//     const booking = await Booking.findOne({
+//       where: { id: req.params.id, user_id: req.user.id },
+//       include: [{ model: Showtime }],
+//     });
+
+//     if (!booking) {
+//       await t.rollback();
+//       return res.status(404).json({ message: "Không tìm thấy vé" });
+//     }
+
+//     // Chỉ huỷ được vé chưa confirmed hoặc trước giờ chiếu 1 tiếng
+//     if (booking.status === "cancelled") {
+//       await t.rollback();
+//       return res.status(400).json({ message: "Vé này đã bị huỷ rồi" });
+//     }
+
+//     const oneHourBefore = new Date(booking.Showtime.start_time);
+//     oneHourBefore.setHours(oneHourBefore.getHours() - 1);
+
+//     if (new Date() > oneHourBefore) {
+//       await t.rollback();
+//       return res
+//         .status(400)
+//         .json({ message: "Không thể huỷ vé trước giờ chiếu 1 tiếng" });
+//     }
+
+//     await booking.update({ status: "cancelled" }, { transaction: t });
+//     await t.commit();
+
+//     res.json({ message: "Huỷ vé thành công" });
+//   } catch (err) {
+//     await t.rollback();
+//     res.status(500).json({ message: "Lỗi server", error: err.message });
+//   }
+// };
+
+// Huỷ vé
 const cancelBooking = async (req, res) => {
   const t = await sequelize.transaction();
   try {
+    const { id } = req.params;
+
     const booking = await Booking.findOne({
-      where: { id: req.params.id, user_id: req.user.id },
-      include: [{ model: Showtime }],
+      where: { id, user_id: req.user.id },
+      include: [
+        { model: Seat },
+        { model: Showtime }, // Đảm bảo include đúng để lấy start_time
+      ],
     });
 
     if (!booking) {
@@ -203,28 +257,40 @@ const cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy vé" });
     }
 
-    // Chỉ huỷ được vé chưa confirmed hoặc trước giờ chiếu 1 tiếng
-    if (booking.status === "cancelled") {
-      await t.rollback();
-      return res.status(400).json({ message: "Vé này đã bị huỷ rồi" });
+    // Kiểm tra an toàn: Nếu không có Showtime (bị xóa nhầm trong DB) thì bỏ qua check giờ
+    if (booking.Showtime) {
+      const now = new Date();
+      const startTime = new Date(booking.Showtime.start_time);
+
+      if (startTime - now < 3600000) {
+        // 1 tiếng
+        await t.rollback();
+        return res
+          .status(400)
+          .json({ message: "Không thể hủy vé trước giờ chiếu 1 tiếng" });
+      }
     }
 
-    const oneHourBefore = new Date(booking.Showtime.start_time);
-    oneHourBefore.setHours(oneHourBefore.getHours() - 1);
-
-    if (new Date() > oneHourBefore) {
-      await t.rollback();
-      return res
-        .status(400)
-        .json({ message: "Không thể huỷ vé trước giờ chiếu 1 tiếng" });
+    // 1. Giải phóng ghế
+    const seatIds = booking.Seats?.map((s) => s.id) || [];
+    if (seatIds.length > 0) {
+      await Seat.update(
+        { status: "available" },
+        { where: { id: seatIds }, transaction: t },
+      );
     }
 
-    await booking.update({ status: "cancelled" }, { transaction: t });
+    // 2. Xóa các bảng liên quan (Chủ động xóa để tránh lỗi 500 do Foreign Key)
+    await Payment.destroy({ where: { booking_id: id }, transaction: t });
+
+    // 3. Xóa vé
+    await booking.destroy({ transaction: t });
+
     await t.commit();
-
-    res.json({ message: "Huỷ vé thành công" });
+    res.json({ message: "Hủy vé thành công" });
   } catch (err) {
-    await t.rollback();
+    if (t) await t.rollback();
+    console.error("Lỗi chi tiết tại Server:", err);
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };

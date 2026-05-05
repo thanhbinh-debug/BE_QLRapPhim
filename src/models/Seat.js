@@ -10,6 +10,11 @@ const Seat = sequelize.define(
       type: DataTypes.ENUM("standard", "vip", "couple"),
       defaultValue: "standard",
     },
+    // --- THÊM DÒNG NÀY ---
+    status: {
+      type: DataTypes.STRING,
+      defaultValue: "available",
+    },
   },
   { tableName: "seats", timestamps: false },
 );

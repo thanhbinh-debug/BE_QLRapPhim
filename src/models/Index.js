@@ -11,7 +11,7 @@ const Food = require("./Food");
 const Payment = require("./Payment");
 
 // Room → Seat
-Room.hasMany(Seat, { foreignKey: "room_id", onDelete: "CASCADE" });
+Room.hasMany(Seat, { foreignKey: "room_id", as: "Seats", onDelete: "CASCADE" });
 Seat.belongsTo(Room, { foreignKey: "room_id" });
 
 // Movie → Showtime
@@ -19,7 +19,10 @@ Movie.hasMany(Showtime, { foreignKey: "movie_id" });
 Showtime.belongsTo(Movie, { foreignKey: "movie_id" });
 
 // Room → Showtime
-Room.hasMany(Showtime, { foreignKey: "room_id" });
+Room.hasMany(Showtime, {
+  foreignKey: "room_id",
+  onDelete: "CASCADE",
+});
 Showtime.belongsTo(Room, { foreignKey: "room_id" });
 
 // User → Booking
@@ -35,6 +38,7 @@ Booking.belongsToMany(Seat, {
   through: "booking_seats",
   foreignKey: "booking_id",
   otherKey: "seat_id",
+  onDelete: "CASCADE",
 });
 Seat.belongsToMany(Booking, {
   through: "booking_seats",
@@ -47,6 +51,7 @@ Booking.belongsToMany(Food, {
   through: "booking_foods",
   foreignKey: "booking_id",
   otherKey: "food_id",
+  onDelete: "CASCADE",
 });
 Food.belongsToMany(Booking, {
   through: "booking_foods",
@@ -55,7 +60,7 @@ Food.belongsToMany(Booking, {
 });
 
 // Booking → Payment
-Booking.hasOne(Payment, { foreignKey: "booking_id" });
+Booking.hasOne(Payment, { foreignKey: "booking_id", onDelete: "CASCADE" });
 Payment.belongsTo(Booking, { foreignKey: "booking_id" });
 
 module.exports = {

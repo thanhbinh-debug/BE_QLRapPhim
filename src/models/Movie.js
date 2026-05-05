@@ -16,6 +16,10 @@ const Movie = sequelize.define(
     },
     release_date: { type: DataTypes.DATEONLY },
     rating: { type: DataTypes.DECIMAL(2, 1), defaultValue: 0 },
+    // --- THÊM MỚI ---
+    director: { type: DataTypes.STRING(200) },
+    cast: { type: DataTypes.TEXT },
+    country: { type: DataTypes.STRING(100) },
   },
   { tableName: "movies", timestamps: true },
 );
