@@ -19,6 +19,22 @@ const getDashboardStats = async (req, res) => {
       { type: sequelize.QueryTypes.SELECT },
     );
 
+    // 2. Doanh thu 7 ngày gần đây (Cho biểu đồ đường)
+    const revenueByDay = await sequelize.query(
+      `SELECT DATE(createdAt) as date, SUM(total_price) as daily_revenue
+       FROM bookings WHERE status = 'confirmed' AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+       GROUP BY DATE(createdAt) ORDER BY date ASC`,
+      { type: sequelize.QueryTypes.SELECT },
+    );
+
+    // 3. Doanh thu theo phim (Cho biểu đồ cột)
+    const revenueByMovie = await sequelize.query(
+      `SELECT m.title, SUM(b.total_price) as value
+       FROM bookings b JOIN showtimes s ON b.showtime_id = s.id JOIN movies m ON s.movie_id = m.id
+       WHERE b.status = 'confirmed' GROUP BY m.id ORDER BY value DESC LIMIT 5`,
+      { type: sequelize.QueryTypes.SELECT },
+    );
+
     // 2. Tính doanh thu chi tiết từ Bookings và Booking_foods
     const incomeData = await sequelize.query(
       `
@@ -42,8 +58,11 @@ const getDashboardStats = async (req, res) => {
       success: true,
       data: {
         seatStats,
+        revenueByDay,
+        revenueByMovie,
         overview: {
-          total_revenue,
+          total_revenue:
+            Number(report.ticket_revenue) + Number(report.food_revenue),
           ticket_revenue: Number(report.ticket_revenue),
           food_revenue: Number(report.food_revenue),
           total_tickets: report.total_tickets,
@@ -51,7 +70,6 @@ const getDashboardStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Lỗi thống kê:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
