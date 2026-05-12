@@ -72,17 +72,49 @@ const createBooking = async (req, res) => {
     });
 
     // 6. Tính tiền đồ ăn nếu có
+    // let foodDetails = [];
+    // if (food_items && food_items.length > 0) {
+    //   const foodIds = food_items.map((f) => f.food_id);
+    //   const foods = await Food.findAll({ where: { id: { [Op.in]: foodIds } } });
+
+    //   foodDetails = food_items.map((item) => {
+    //     const food = foods.find((f) => f.id === item.food_id);
+    //     if (!food) throw new Error(`Không tìm thấy món ăn id ${item.food_id}`);
+    //     totalPrice += Number(food.price) * item.quantity;
+    //     return { food_id: food.id, quantity: item.quantity, price: food.price };
+    //   });
+    // }
+
     let foodDetails = [];
     if (food_items && food_items.length > 0) {
       const foodIds = food_items.map((f) => f.food_id);
       const foods = await Food.findAll({ where: { id: { [Op.in]: foodIds } } });
 
-      foodDetails = food_items.map((item) => {
+      for (const item of food_items) {
         const food = foods.find((f) => f.id === item.food_id);
         if (!food) throw new Error(`Không tìm thấy món ăn id ${item.food_id}`);
+
+        // KIỂM TRA TỒN KHO
+        if (food.stock < item.quantity) {
+          throw new Error(
+            `Món ${food.name} không đủ hàng (Còn lại: ${food.stock})`,
+          );
+        }
+
         totalPrice += Number(food.price) * item.quantity;
-        return { food_id: food.id, quantity: item.quantity, price: food.price };
-      });
+
+        // TRỪ TỒN KHO TRONG TRANSACTION
+        await food.update(
+          { stock: food.stock - item.quantity },
+          { transaction: t },
+        );
+
+        foodDetails.push({
+          food_id: food.id,
+          quantity: item.quantity,
+          price: food.price,
+        });
+      }
     }
 
     // 7. Tạo booking

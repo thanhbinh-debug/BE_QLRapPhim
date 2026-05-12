@@ -14,6 +14,7 @@ const Food = sequelize.define(
     image: { type: DataTypes.TEXT },
     description: { type: DataTypes.TEXT },
     is_available: { type: DataTypes.BOOLEAN, defaultValue: true },
+    stock: { type: DataTypes.INTEGER, defaultValue: 0 },
   },
   { tableName: "foods", timestamps: false },
 );
