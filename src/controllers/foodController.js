@@ -44,6 +44,7 @@ const createFood = async (req, res) => {
       price,
       image,
       description,
+      stock: stock || 0,
     });
     res.status(201).json({ message: "Thêm món thành công", food });
   } catch (err) {

@@ -35,6 +35,20 @@ const getDashboardStats = async (req, res) => {
       { type: sequelize.QueryTypes.SELECT },
     );
 
+    // 4. Khung giờ đông khách (Peak Hours)
+    const peakHours = await sequelize.query(
+      `SELECT HOUR(s.start_time) as hour, COUNT(b.id) as count
+       FROM bookings b JOIN showtimes s ON b.showtime_id = s.id
+       WHERE b.status = 'confirmed' GROUP BY HOUR(s.start_time) ORDER BY hour ASC`,
+      { type: sequelize.QueryTypes.SELECT },
+    );
+
+    // 5. Cảnh báo kho (Các món có stock < 10)
+    const lowStockFoods = await sequelize.query(
+      `SELECT name, stock FROM foods WHERE stock < 10 AND is_available = 1`,
+      { type: sequelize.QueryTypes.SELECT },
+    );
+
     // 2. Tính doanh thu chi tiết từ Bookings và Booking_foods
     const incomeData = await sequelize.query(
       `
@@ -60,6 +74,8 @@ const getDashboardStats = async (req, res) => {
         seatStats,
         revenueByDay,
         revenueByMovie,
+        peakHours,
+        lowStockFoods,
         overview: {
           total_revenue:
             Number(report.ticket_revenue) + Number(report.food_revenue),
