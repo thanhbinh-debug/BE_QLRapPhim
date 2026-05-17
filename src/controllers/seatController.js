@@ -49,40 +49,56 @@ const getSeatsByShowtime = async (req, res) => {
   }
 };
 
-// Tạo ghế hàng loạt cho phòng (admin)
+// Tạo ghế cho phòng (admin) — QUAN TRỌNG
 const createSeatsForRoom = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { rows, seatsPerRow, vipRows } = req.body;
-    // rows: số hàng (VD: 8)
-    // seatsPerRow: số ghế mỗi hàng (VD: 10)
-    // vipRows: mảng hàng VIP (VD: ['C','D','E'])
+    // Nhận mảng cấu hình chi tiết từ Frontend gửi lên
+    const { rowsConfig } = req.body;
+    // rowsConfig dạng: [{ row: 'A', seatsCount: 10, type: 'vip' }, { row: 'B', seatsCount: 8, type: 'standard' }]
 
     const room = await Room.findByPk(roomId);
     if (!room) return res.status(404).json({ message: "Không tìm thấy phòng" });
 
-    // Xoá ghế cũ nếu có
+    // 1. Xoá toàn bộ ghế cũ của phòng này nếu có
     await Seat.destroy({ where: { room_id: roomId } });
 
     const seats = [];
-    for (let r = 0; r < rows; r++) {
-      const rowLetter = String.fromCharCode(65 + r); // A, B, C...
-      const isVip = vipRows?.includes(rowLetter);
+    let totalCapacity = 0; // Biến tính tổng số ghế thực tế để cập nhật phòng
 
-      for (let n = 1; n <= seatsPerRow; n++) {
-        seats.push({
-          room_id: roomId,
-          row: rowLetter,
-          number: n,
-          type: isVip ? "vip" : "standard",
-        });
-      }
+    // 2. Duyệt qua từng cấu hình hàng ghế được gửi lên
+    if (rowsConfig && Array.isArray(rowsConfig)) {
+      rowsConfig.forEach((config) => {
+        const rowLetter = config.row ? config.row.trim().toUpperCase() : "";
+        const seatsCount = parseInt(config.seatsCount) || 0;
+        const seatType = config.type || "standard"; // 'standard', 'vip', 'couple'
+
+        if (rowLetter && seatsCount > 0) {
+          // Vòng lặp tạo số thứ tự ghế từ 1 đến seatsCount của hàng đó
+          for (let n = 1; n <= seatsCount; n++) {
+            seats.push({
+              room_id: roomId,
+              row: rowLetter,
+              number: n,
+              type: seatType,
+            });
+          }
+          totalCapacity += seatsCount; // Cộng dồn sức chứa
+        }
+      });
     }
 
+    if (seats.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Cấu hình ghế không hợp lệ hoặc rỗng." });
+    }
+
+    // 3. Thực hiện tạo hàng loạt vào database
     await Seat.bulkCreate(seats);
 
-    // Cập nhật sức chứa phòng
-    await room.update({ capacity: rows * seatsPerRow });
+    // 4. Cập nhật sức chứa phòng dựa trên tổng số ghế thực tế tạo ra
+    await room.update({ capacity: totalCapacity });
 
     res.status(201).json({ message: `Tạo ${seats.length} ghế thành công` });
   } catch (err) {
