@@ -11,11 +11,14 @@ const bookingRoutes = require("./src/routes/bookingRoutes");
 const foodRoutes = require("./src/routes/foodRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
+const path = require("path");
 const app = express();
 
 // Middleware
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
+
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // Routes
 app.use("/auth", authRoutes);

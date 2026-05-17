@@ -20,6 +20,14 @@ const Movie = sequelize.define(
     director: { type: DataTypes.STRING(200) },
     cast: { type: DataTypes.TEXT },
     country: { type: DataTypes.STRING(100) },
+    end_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    copyright_cost: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
   },
   { tableName: "movies", timestamps: true },
 );

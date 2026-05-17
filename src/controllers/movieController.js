@@ -58,21 +58,28 @@ const createMovie = async (req, res) => {
       trailer_url,
       status,
       release_date,
+      end_date,
+      copyright_cost,
       rating,
       director,
       cast,
-      country, // Nhận thêm dữ liệu
+      country,
     } = req.body;
+
+    // Nếu có file poster được upload, lấy đường dẫn lưu vào DB
+    const posterPath = req.file ? `/uploads/${req.file.filename}` : null;
 
     const movie = await Movie.create({
       title,
       description,
       genre,
       duration,
-      poster,
+      poster: posterPath, // Lưu đường dẫn ảnh vào DB
       trailer_url,
       status,
       release_date,
+      end_date,
+      copyright_cost,
       rating,
       director,
       cast,
@@ -85,13 +92,25 @@ const createMovie = async (req, res) => {
   }
 };
 
-// Sửa phim (admin)
 const updateMovie = async (req, res) => {
   try {
     const movie = await Movie.findByPk(req.params.id);
     if (!movie) return res.status(404).json({ message: "Không tìm thấy phim" });
 
-    await movie.update(req.body);
+    // Tạo bản sao dữ liệu gửi lên từ body
+    const updateData = { ...req.body };
+
+    delete updateData.poster; // Xoá trường poster nếu có trong body để tránh ghi đè
+
+    // CHỨC NĂNG: Nếu admin cập nhật ảnh mới thì cập nhật đường dẫn mới, nếu giữ nguyên thì không đè dữ liệu cũ
+    if (req.file) {
+      updateData.poster = `/uploads/${req.file.filename}`;
+    } else if (req.body.poster && typeof req.body.poster === "string") {
+      // Nếu không chọn ảnh mới, giữ nguyên đường dẫn chuỗi tĩnh cũ được gửi lên từ form
+      updateData.poster = req.body.poster;
+    }
+
+    await movie.update(updateData);
     res.json({ message: "Cập nhật phim thành công", movie });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
