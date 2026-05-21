@@ -2,7 +2,7 @@ const sequelize = require("../config/db");
 const { DataTypes } = require("sequelize");
 
 const User = require("./User");
-const Movie = require("./Movie");
+const { Movie, Genre, Country } = require("./Movie");
 const Room = require("./Room");
 const Seat = require("./Seat");
 const Showtime = require("./Showtime");
@@ -67,6 +67,8 @@ module.exports = {
   sequelize,
   User,
   Movie,
+  Genre,
+  Country,
   Room,
   Seat,
   Showtime,

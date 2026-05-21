@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
 
+// 1. Model Movie gốc của bạn
 const Movie = sequelize.define(
   "Movie",
   {
@@ -16,20 +17,32 @@ const Movie = sequelize.define(
     },
     release_date: { type: DataTypes.DATEONLY },
     rating: { type: DataTypes.DECIMAL(2, 1), defaultValue: 0 },
-    // --- THÊM MỚI ---
     director: { type: DataTypes.STRING(200) },
     cast: { type: DataTypes.TEXT },
     country: { type: DataTypes.STRING(100) },
-    end_date: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-    },
-    copyright_cost: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
+    end_date: { type: DataTypes.DATEONLY, allowNull: true },
+    copyright_cost: { type: DataTypes.INTEGER, defaultValue: 0 },
   },
   { tableName: "movies", timestamps: true },
 );
 
-module.exports = Movie;
+// 2. Thêm mới bảng Thể loại
+const Genre = sequelize.define(
+  "Genre",
+  {
+    name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  },
+  { tableName: "genres", timestamps: false },
+);
+
+// 3. Thêm mới bảng Quốc gia
+const Country = sequelize.define(
+  "Country",
+  {
+    name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  },
+  { tableName: "countries", timestamps: false },
+);
+
+// Gộp chung xuất bản Object (Từ nay file Index.js bóc tách { Movie } sẽ chuẩn chỉ 100%)
+module.exports = { Movie, Genre, Country };

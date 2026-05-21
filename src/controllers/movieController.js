@@ -1,14 +1,15 @@
-const { Movie } = require("../models");
+// Thay đổi dòng import đầu file:
+const { Movie, Genre, Country } = require("../models"); // Cập nhật đường dẫn tới file chứa model của bạn
 const { Op } = require("sequelize");
 
-// Lấy danh sách phim (có thể lọc theo status)
+// --- CÁC HÀM XỬ LÝ LẤY DỮ LIỆU ĐỘNG ---
+
+// --- GIỮ NGUYÊN CÁC HÀM CŨ CỦA BẠN (getMovies, createMovie, updateMovie...) ---
 const getMovies = async (req, res) => {
   try {
-    const { status } = req.query; // ?status=now_showing hoặc coming_soon
-
+    const { status } = req.query;
     const where = {};
     if (status) where.status = status;
-
     const movies = await Movie.findAll({
       where,
       order: [["createdAt", "DESC"]],
@@ -19,13 +20,10 @@ const getMovies = async (req, res) => {
   }
 };
 
-// Tìm kiếm phim theo tên
 const searchMovies = async (req, res) => {
   try {
-    const { q } = req.query; // ?q=ten_phim
-
+    const { q } = req.query;
     if (!q) return res.status(400).json({ message: "Thiếu từ khoá tìm kiếm" });
-
     const movies = await Movie.findAll({
       where: { title: { [Op.like]: `%${q}%` } },
     });
@@ -35,7 +33,6 @@ const searchMovies = async (req, res) => {
   }
 };
 
-// Lấy chi tiết 1 phim
 const getMovieById = async (req, res) => {
   try {
     const movie = await Movie.findByPk(req.params.id);
@@ -46,7 +43,6 @@ const getMovieById = async (req, res) => {
   }
 };
 
-// Thêm phim mới (admin)
 const createMovie = async (req, res) => {
   try {
     const {
@@ -54,7 +50,6 @@ const createMovie = async (req, res) => {
       description,
       genre,
       duration,
-      poster,
       trailer_url,
       status,
       release_date,
@@ -65,16 +60,13 @@ const createMovie = async (req, res) => {
       cast,
       country,
     } = req.body;
-
-    // Nếu có file poster được upload, lấy đường dẫn lưu vào DB
     const posterPath = req.file ? `/uploads/${req.file.filename}` : null;
-
     const movie = await Movie.create({
       title,
       description,
       genre,
       duration,
-      poster: posterPath, // Lưu đường dẫn ảnh vào DB
+      poster: posterPath,
       trailer_url,
       status,
       release_date,
@@ -83,9 +75,8 @@ const createMovie = async (req, res) => {
       rating,
       director,
       cast,
-      country, // Lưu vào DB
+      country,
     });
-
     res.status(201).json({ message: "Thêm phim thành công", movie });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -96,20 +87,13 @@ const updateMovie = async (req, res) => {
   try {
     const movie = await Movie.findByPk(req.params.id);
     if (!movie) return res.status(404).json({ message: "Không tìm thấy phim" });
-
-    // Tạo bản sao dữ liệu gửi lên từ body
     const updateData = { ...req.body };
-
-    delete updateData.poster; // Xoá trường poster nếu có trong body để tránh ghi đè
-
-    // CHỨC NĂNG: Nếu admin cập nhật ảnh mới thì cập nhật đường dẫn mới, nếu giữ nguyên thì không đè dữ liệu cũ
+    delete updateData.poster;
     if (req.file) {
       updateData.poster = `/uploads/${req.file.filename}`;
     } else if (req.body.poster && typeof req.body.poster === "string") {
-      // Nếu không chọn ảnh mới, giữ nguyên đường dẫn chuỗi tĩnh cũ được gửi lên từ form
       updateData.poster = req.body.poster;
     }
-
     await movie.update(updateData);
     res.json({ message: "Cập nhật phim thành công", movie });
   } catch (err) {
@@ -117,14 +101,74 @@ const updateMovie = async (req, res) => {
   }
 };
 
-// Xoá phim (admin)
 const deleteMovie = async (req, res) => {
   try {
     const movie = await Movie.findByPk(req.params.id);
     if (!movie) return res.status(404).json({ message: "Không tìm thấy phim" });
-
     await movie.destroy();
     res.json({ message: "Xoá phim thành công" });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+// Lấy toàn bộ danh sách thể loại
+const getGenres = async (req, res) => {
+  try {
+    const genres = await Genre.findAll({ order: [["name", "ASC"]] });
+    res.json(genres);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Lỗi lấy danh sách thể loại", error: err.message });
+  }
+};
+
+// Thêm một thể loại mới
+const createGenre = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name)
+      return res.status(400).json({ message: "Tên thể loại không được trống" });
+
+    const [genre, created] = await Genre.findOrCreate({
+      where: { name: name.trim() },
+    });
+    if (!created)
+      return res.status(400).json({ message: "Thể loại này đã tồn tại" });
+
+    res.status(201).json({ message: "Thêm thể loại thành công", genre });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+// Lấy toàn bộ danh sách quốc gia
+const getCountries = async (req, res) => {
+  try {
+    const countries = await Country.findAll({ order: [["name", "ASC"]] });
+    res.json(countries);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Lỗi lấy danh sách quốc gia", error: err.message });
+  }
+};
+
+// Thêm một quốc gia mới
+const createCountry = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name)
+      return res.status(400).json({ message: "Tên quốc gia không được trống" });
+
+    const [country, created] = await Country.findOrCreate({
+      where: { name: name.trim() },
+    });
+    if (!created)
+      return res.status(400).json({ message: "Quốc gia này đã tồn tại" });
+
+    res.status(201).json({ message: "Thêm quốc gia thành công", country });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
@@ -137,4 +181,8 @@ module.exports = {
   createMovie,
   updateMovie,
   deleteMovie,
+  getGenres,
+  createGenre,
+  getCountries,
+  createCountry,
 };

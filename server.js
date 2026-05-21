@@ -11,6 +11,7 @@ const bookingRoutes = require("./src/routes/bookingRoutes");
 const foodRoutes = require("./src/routes/foodRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
+const genreCountryRoutes = require("./src/routes/genreCountryRoutes");
 const path = require("path");
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/bookings", bookingRoutes);
 app.use("/foods", foodRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/admin", adminRoutes);
+app.use("/genre-country", genreCountryRoutes);
 
 // Kết nối DB rồi mới start server
 const PORT = process.env.PORT || 5000;
