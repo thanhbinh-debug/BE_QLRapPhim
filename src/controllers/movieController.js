@@ -7,13 +7,29 @@ const { Op } = require("sequelize");
 // --- GIỮ NGUYÊN CÁC HÀM CŨ CỦA BẠN (getMovies, createMovie, updateMovie...) ---
 const getMovies = async (req, res) => {
   try {
-    const { status } = req.query;
+    // Nhận tham số status và admin_manage từ query string
+    const { status, admin_manage } = req.query;
     const where = {};
-    if (status) where.status = status;
+
+    // Nếu KHÔNG PHẢI là trang quản lý của Admin (tức là User hoặc ô Thêm suất chiếu)
+    // thì mới áp dụng bộ lọc ẩn phim đã hết hạn
+    if (admin_manage !== "true") {
+      const today = new Date().toISOString().slice(0, 10);
+
+      // SỬA CÚ PHÁP ĐÚNG Ở ĐÂY: Gán thuộc tính [Op.or] vào object where
+      where[Op.or] = [{ end_date: { [Op.gte]: today } }, { end_date: null }];
+    }
+
+    // Lọc theo trạng thái phim nếu phía Client có truyền lên
+    if (status) {
+      where.status = status;
+    }
+
     const movies = await Movie.findAll({
       where,
       order: [["createdAt", "DESC"]],
     });
+
     res.json(movies);
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -174,6 +190,37 @@ const createCountry = async (req, res) => {
   }
 };
 
+// Thêm vào cuối file movieController.js
+const deleteGenre = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Genre.destroy({ where: { id } });
+    if (!deleted)
+      return res.status(404).json({ message: "Không tìm thấy thể loại" });
+    res.json({ message: "Xóa thể loại thành công" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Lỗi server khi xóa thể loại", error: err.message });
+  }
+};
+
+const deleteCountry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Country.destroy({ where: { id } });
+    if (!deleted)
+      return res.status(404).json({ message: "Không tìm thấy quốc gia" });
+    res.json({ message: "Xóa quốc gia thành công" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Lỗi server khi xóa quốc gia", error: err.message });
+  }
+};
+
+// Hãy nhớ thêm 'deleteGenre' và 'deleteCountry' vào Object module.exports ở đáy file nhé!
+
 module.exports = {
   getMovies,
   searchMovies,
@@ -185,4 +232,6 @@ module.exports = {
   createGenre,
   getCountries,
   createCountry,
+  deleteGenre,
+  deleteCountry,
 };

@@ -24,7 +24,7 @@ const getShowtimes = async (req, res) => {
         { model: Movie, attributes: ["id", "title", "poster", "duration"] },
         { model: Room, attributes: ["id", "name", "screen_type"] },
       ],
-      order: [["start_time", "ASC"]],
+      order: [["start_time", "DESC"]],
     });
 
     res.json(showtimes);
@@ -32,37 +32,6 @@ const getShowtimes = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
-
-// Lấy chi tiết 1 suất chiếu
-// const getShowtimeById = async (req, res) => {
-//   try {
-//     const showtime = await Showtime.findByPk(req.params.id, {
-//       include: [
-//         {
-//           model: Movie,
-//           attributes: ["id", "title", "poster", "duration", "genre"],
-//         },
-//         {
-//           model: Room,
-//           attributes: ["id", "name", "screen_type", "capacity"],
-//           include: [
-//             {
-//               model: Seat, // Sử dụng trực tiếp Seat đã import ở trên[cite: 2]
-//               as: "Seats",
-//               attributes: ["id", "row", "number", "type", "status"],
-//             },
-//           ],
-//         },
-//       ],
-//     });
-
-//     if (!showtime)
-//       return res.status(404).json({ message: "Không tìm thấy suất chiếu" });
-//     res.json(showtime);
-//   } catch (err) {
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
 
 const getShowtimeById = async (req, res) => {
   try {
@@ -116,161 +85,12 @@ const getShowtimeById = async (req, res) => {
   }
 };
 
-// Thêm suất chiếu (admin)
-// const createShowtime = async (req, res) => {
-//   try {
-//     const { movie_id, room_id, start_time, price, price_vip } = req.body;
-
-//     // Kiểm tra phim và phòng tồn tại
-//     const movie = await Movie.findByPk(movie_id);
-//     if (!movie) return res.status(404).json({ message: "Không tìm thấy phim" });
-
-//     const room = await Room.findByPk(room_id);
-//     if (!room) return res.status(404).json({ message: "Không tìm thấy phòng" });
-
-//     // Tự tính end_time = start_time + duration phim
-//     const start = new Date(start_time);
-//     const end = new Date(start.getTime() + movie.duration * 60 * 1000);
-
-//     // Kiểm tra phòng có bị trùng lịch không
-//     const conflict = await Showtime.findOne({
-//       where: {
-//         room_id,
-//         [Op.or]: [
-//           { start_time: { [Op.between]: [start, end] } },
-//           { end_time: { [Op.between]: [start, end] } },
-//         ],
-//       },
-//     });
-
-//     if (conflict) {
-//       return res
-//         .status(400)
-//         .json({ message: "Phòng đã có suất chiếu trong khung giờ này" });
-//     }
-
-//     const showtime = await Showtime.create({
-//       movie_id,
-//       room_id,
-//       start_time: start,
-//       end_time: end,
-//       price,
-//       price_vip,
-//     });
-
-//     res.status(201).json({ message: "Thêm suất chiếu thành công", showtime });
-//   } catch (err) {
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
-
-// const createShowtime = async (req, res) => {
-//   try {
-//     const {
-//       movie_id,
-//       room_id,
-//       start_time,
-//       price,
-//       price_vip,
-//       is_auto,
-//       buffer_time,
-//       end_day_time,
-//     } = req.body;
-
-//     const movie = await Movie.findByPk(movie_id);
-//     if (!movie) return res.status(404).json({ message: "Không tìm thấy phim" });
-
-//     const room = await Room.findByPk(room_id);
-//     if (!room) return res.status(404).json({ message: "Không tìm thấy phòng" });
-
-//     let showtimesToCreate = [];
-
-//     // Ép kiểu chuẩn để tính toán chính xác
-//     let currentStartMs = new Date(start_time).getTime();
-//     const durationMs = parseInt(movie.duration) * 60 * 1000;
-//     const bufferMs = (parseInt(buffer_time) || 15) * 60 * 1000;
-
-//     if (is_auto) {
-//       const limitMs = new Date(end_day_time).getTime();
-
-//       // Vòng lặp dựa trên miliseconds để chính xác tuyệt đối
-//       while (currentStartMs + durationMs <= limitMs) {
-//         let currentEndMs = currentStartMs + durationMs;
-
-//         // Kiểm tra xung đột (Dùng Date object cho Sequelize Op.between)
-//         const conflict = await Showtime.findOne({
-//           where: {
-//             room_id,
-//             [Op.or]: [
-//               {
-//                 start_time: {
-//                   [Op.between]: [
-//                     new Date(currentStartMs),
-//                     new Date(currentEndMs),
-//                   ],
-//                 },
-//               },
-//               {
-//                 end_time: {
-//                   [Op.between]: [
-//                     new Date(currentStartMs),
-//                     new Date(currentEndMs),
-//                   ],
-//                 },
-//               },
-//             ],
-//           },
-//         });
-
-//         if (!conflict) {
-//           showtimesToCreate.push({
-//             movie_id,
-//             room_id,
-//             start_time: new Date(currentStartMs),
-//             end_time: new Date(currentEndMs),
-//             price,
-//             price_vip,
-//           });
-//         }
-
-//         // Bước nhảy: Kết thúc suất này + thời gian nghỉ
-//         currentStartMs = currentEndMs + bufferMs;
-//       }
-//     } else {
-//       // Logic 1 suất đơn lẻ
-//       const endMs = currentStartMs + durationMs;
-//       showtimesToCreate.push({
-//         movie_id,
-//         room_id,
-//         start_time: new Date(currentStartMs),
-//         end_time: new Date(endMs),
-//         price,
-//         price_vip,
-//       });
-//     }
-
-//     if (showtimesToCreate.length === 0) {
-//       return res.status(400).json({
-//         message:
-//           "Không có suất chiếu nào được tạo. Vui lòng kiểm tra lại khung giờ hoặc trùng lịch!",
-//       });
-//     }
-
-//     await Showtime.bulkCreate(showtimesToCreate);
-
-//     res.status(201).json({
-//       message: `Hệ thống đã tự động tạo thành công ${showtimesToCreate.length} suất chiếu.`,
-//     });
-//   } catch (err) {
-//     console.error("Lỗi Create Showtime:", err);
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
 
 const createShowtime = async (req, res) => {
   try {
     const {
-      movie_id,
+      movie_id, // Cho suất đơn lẻ
+      movie_ids, // Mảng ID phim gửi lên từ checkbox khi bật is_auto
       room_id,
       start_time,
       price,
@@ -280,47 +100,65 @@ const createShowtime = async (req, res) => {
       end_day_time,
     } = req.body;
 
-    const movie = await Movie.findByPk(movie_id);
-    if (!movie) return res.status(404).json({ message: "Không tìm thấy phim" });
-
     const room = await Room.findByPk(room_id);
     if (!room) return res.status(404).json({ message: "Không tìm thấy phòng" });
 
     let showtimesToCreate = [];
     let currentStartMs = new Date(start_time).getTime();
-    const durationMs = parseInt(movie.duration) * 60 * 1000;
     const bufferMs = (parseInt(buffer_time) || 15) * 60 * 1000;
 
-    // Hàm kiểm tra xung đột dùng chung cho cả 2 trường hợp
+    // Hàm kiểm tra xung đột lịch chiếu dùng chung
     const checkConflict = async (startMs, endMs, roomId) => {
-      // Ép kiểu sang ISO String để MySQL so sánh chính xác tuyệt đối
       const startTimeISO = new Date(startMs).toISOString();
       const endTimeISO = new Date(endMs).toISOString();
-
-      console.log(`--- Đang kiểm tra Phòng ${roomId} ---`);
-      console.log(`Dự kiến: ${startTimeISO} -> ${endTimeISO}`);
 
       return await Showtime.findOne({
         where: {
           room_id: roomId,
           [Op.and]: [
-            {
-              start_time: { [Op.lt]: endTimeISO },
-            },
-            {
-              end_time: { [Op.gt]: startTimeISO },
-            },
+            { start_time: { [Op.lt]: endTimeISO } },
+            { end_time: { [Op.gt]: startTimeISO } },
           ],
         },
       });
     };
 
+    // TRƯỜNG HỢP 1: TỰ ĐỘNG XẾP LỊCH XOAY VÒNG NHIỀU PHIM KHÁC NHAU VÀO 1 PHÒNG
     if (is_auto) {
-      const limitMs = new Date(end_day_time).getTime();
+      if (!movie_ids || !Array.isArray(movie_ids) || movie_ids.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Vui lòng chọn danh sách bộ phim cần xếp lịch." });
+      }
 
-      while (currentStartMs + durationMs <= limitMs) {
+      // Lấy thông tin thời lượng (duration) của tất cả phim được chọn trong mảng ID
+      const moviesList = await Movie.findAll({
+        where: { id: { [Op.in]: movie_ids } },
+        attributes: ["id", "title", "duration"],
+      });
+
+      if (moviesList.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Không tìm thấy thông tin các bộ phim đã chọn." });
+      }
+
+      const limitMs = new Date(end_day_time).getTime();
+      let movieIndex = 0; // Biến con trỏ phục vụ xoay vòng danh sách phim
+
+      // Vòng lặp chạy gối đầu liên tục cho đến khi vượt mốc kết thúc ngày
+      while (true) {
+        // Lấy bộ phim hiện tại trong hàng đợi xoay vòng
+        const currentMovie = moviesList[movieIndex];
+        const durationMs = parseInt(currentMovie.duration) * 60 * 1000;
         let currentEndMs = currentStartMs + durationMs;
 
+        // Nếu suất chiếu này vượt quá giờ kết thúc ngày được cấu hình thì dừng nghỉ hoàn toàn
+        if (currentEndMs > limitMs) {
+          break;
+        }
+
+        // Kiểm tra xem khung giờ dự kiến gối đầu này có bị trùng với lịch cố định nào trước đó không
         const conflict = await checkConflict(
           currentStartMs,
           currentEndMs,
@@ -328,24 +166,40 @@ const createShowtime = async (req, res) => {
         );
 
         if (!conflict) {
+          // Khung giờ trống hoàn toàn -> Thêm lịch thành công cho bộ phim này
           showtimesToCreate.push({
-            movie_id,
+            movie_id: currentMovie.id,
             room_id,
             start_time: new Date(currentStartMs),
             end_time: new Date(currentEndMs),
             price,
             price_vip,
           });
-          // Nếu tạo được, bước nhảy là kết thúc + nghỉ
+
+          // Bước nhảy thời gian: Kết thúc phim + thời gian dọn dẹp/nghỉ ngơi
           currentStartMs = currentEndMs + bufferMs;
+
+          // Chuyển xoay vòng sang bộ phim tiếp theo trong danh sách mảng
+          movieIndex = (movieIndex + 1) % moviesList.length;
         } else {
-          // Nếu trùng, nhảy đến thời điểm kết thúc của suất bị trùng + thời gian nghỉ
+          // Bị trùng lịch -> Nhảy mốc thời gian vượt qua suất bị trùng + thời gian nghỉ
+          console.log(
+            `Phát hiện lịch trùng tại phòng, hệ thống tự động nhảy qua lịch trùng...`,
+          );
           currentStartMs = new Date(conflict.end_time).getTime() + bufferMs;
+
+          // Giữ nguyên movieIndex để bộ phim này tiếp tục được ưu tiên thử xếp ở khung giờ trống sau
         }
       }
     } else {
-      // Logic 1 suất đơn lẻ - Nay đã có kiểm tra trùng
+      // TRƯỜNG HỢP 2: LÝ LUẬN CHO 1 SUẤT CHIẾU ĐƠN LẺ THỦ CÔNG
+      const movie = await Movie.findByPk(movie_id);
+      if (!movie)
+        return res.status(404).json({ message: "Không tìm thấy phim" });
+
+      const durationMs = parseInt(movie.duration) * 60 * 1000;
       const currentEndMs = currentStartMs + durationMs;
+
       const conflict = await checkConflict(
         currentStartMs,
         currentEndMs,
@@ -371,14 +225,15 @@ const createShowtime = async (req, res) => {
     if (showtimesToCreate.length === 0) {
       return res.status(400).json({
         message:
-          "Không thể tạo suất chiếu. Khung giờ này đã kín lịch hoặc không đủ thời gian.",
+          "Không thể tự động tạo suất chiếu nào. Khung giờ này đã kín lịch hoặc thời gian kết thúc ngày quá ngắn.",
       });
     }
 
+    // Tiến hành bulkCreate danh sách suất chiếu hợp lệ vào DB
     await Showtime.bulkCreate(showtimesToCreate);
 
     res.status(201).json({
-      message: `Thành công! Đã thêm ${showtimesToCreate.length} suất chiếu vào hệ thống.`,
+      message: `Thành công! Đã thêm ${showtimesToCreate.length} suất chiếu xen kẽ gối đầu vào hệ thống.`,
     });
   } catch (err) {
     console.error("Lỗi Create Showtime:", err);

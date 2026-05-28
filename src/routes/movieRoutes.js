@@ -14,6 +14,8 @@ const {
   createGenre,
   getCountries,
   createCountry,
+  deleteGenre,
+  deleteCountry,
 } = require("../controllers/movieController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const roleMiddleware = require("../middlewares/roleMiddleware");
@@ -47,5 +49,7 @@ router.get("/config/genres", getGenres);
 router.post("/config/genres", adminOnly, createGenre);
 router.get("/config/countries", getCountries);
 router.post("/config/countries", adminOnly, createCountry);
+router.delete("/config/genres/:id", adminOnly, deleteGenre);
+router.delete("/config/countries/:id", adminOnly, deleteCountry);
 
 module.exports = router;
