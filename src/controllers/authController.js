@@ -14,40 +14,6 @@ const generateToken = (user) => {
   );
 };
 
-// Đăng ký
-// const register = async (req, res) => {
-//   try {
-//     const { name, email, password, phone } = req.body;
-
-//     // Kiểm tra email đã tồn tại chưa
-//     const existing = await User.findOne({ where: { email } });
-//     if (existing) {
-//       return res.status(400).json({ message: "Email đã được sử dụng" });
-//     }
-
-//     // Mã hoá mật khẩu
-//     const password_hash = await bcrypt.hash(password, 10);
-
-//     // Tạo user mới
-//     const user = await User.create({ name, email, password_hash, phone });
-
-//     const token = generateToken(user);
-
-//     res.status(201).json({
-//       message: "Đăng ký thành công",
-//       token,
-//       user: {
-//         id: user.id,
-//         name: user.name,
-//         email: user.email,
-//         role: user.role,
-//       },
-//     });
-//   } catch (err) {
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
-
 const register = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -158,52 +124,6 @@ const getMe = async (req, res) => {
   }
 };
 
-// const forgotPassword = async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     const user = await User.findOne({ where: { email } }); //[cite: 7]
-
-//     if (!user) {
-//       return res
-//         .status(404)
-//         .json({ message: "Email không tồn tại trong hệ thống" });
-//     }
-
-//     // Tạo token ngẫu nhiên
-//     const resetToken = crypto.randomBytes(20).toString("hex");
-
-//     // Hash và lưu vào DB (Hạn 10 phút)
-//     user.reset_password_token = crypto
-//       .createHash("sha256")
-//       .update(resetToken)
-//       .digest("hex");
-//     user.reset_password_expires = Date.now() + 10 * 60 * 1000;
-
-//     await user.save();
-
-//     // Link dẫn tới trang Reset Password ở React (Port 3000)
-//     const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
-
-//     const message = `Bạn nhận được email này vì bạn đã yêu cầu đặt lại mật khẩu. \n\n Vui lòng nhấn vào link bên dưới để thực hiện (Link có hiệu lực trong 10 phút): \n\n ${resetUrl}`;
-
-//     try {
-//       await sendEmail({
-//         email: user.email,
-//         subject: "Khôi phục mật khẩu - Cine Star",
-//         message,
-//       });
-//       res.status(200).json({ message: "Email khôi phục đã được gửi" });
-//     } catch (err) {
-//       user.reset_password_token = null;
-//       user.reset_password_expires = null;
-//       await user.save();
-//       return res.status(500).json({ message: "Không thể gửi email lúc này" });
-//     }
-//   } catch (err) {
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
-
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -251,41 +171,6 @@ const forgotPassword = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
-
-// 2. Đặt lại mật khẩu
-// const resetPassword = async (req, res) => {
-//   try {
-//     // Hash token nhận được để so khớp với DB
-//     const hashedToken = crypto
-//       .createHash("sha256")
-//       .update(req.params.token)
-//       .digest("hex");
-
-//     const user = await User.findOne({
-//       where: {
-//         reset_password_token: hashedToken,
-//         reset_password_expires: { [Op.gt]: Date.now() },
-//       },
-//     });
-
-//     if (!user) {
-//       return res
-//         .status(400)
-//         .json({ message: "Token không hợp lệ hoặc đã hết hạn" });
-//     }
-
-//     // Mã hoá mật khẩu mới[cite: 7]
-//     user.password_hash = await bcrypt.hash(req.body.password, 10);
-//     user.reset_password_token = null;
-//     user.reset_password_expires = null;
-
-//     await user.save();
-
-//     res.status(200).json({ message: "Mật khẩu đã được thay đổi thành công" });
-//   } catch (err) {
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
 
 const resetPassword = async (req, res) => {
   try {

@@ -5,22 +5,50 @@ const { Op } = require("sequelize");
 // --- CÁC HÀM XỬ LÝ LẤY DỮ LIỆU ĐỘNG ---
 
 // --- GIỮ NGUYÊN CÁC HÀM CŨ CỦA BẠN (getMovies, createMovie, updateMovie...) ---
+// const getMovies = async (req, res) => {
+//   try {
+//     // Nhận tham số status và admin_manage từ query string
+//     const { status, admin_manage } = req.query;
+//     const where = {};
+
+//     // Nếu KHÔNG PHẢI là trang quản lý của Admin (tức là User hoặc ô Thêm suất chiếu)
+//     // thì mới áp dụng bộ lọc ẩn phim đã hết hạn
+//     if (admin_manage !== "true") {
+//       const today = new Date().toISOString().slice(0, 10);
+
+//       // SỬA CÚ PHÁP ĐÚNG Ở ĐÂY: Gán thuộc tính [Op.or] vào object where
+//       where[Op.or] = [{ end_date: { [Op.gte]: today } }, { end_date: null }];
+//     }
+
+//     // Lọc theo trạng thái phim nếu phía Client có truyền lên
+//     if (status) {
+//       where.status = status;
+//     }
+
+//     const movies = await Movie.findAll({
+//       where,
+//       order: [["createdAt", "DESC"]],
+//     });
+
+//     res.json(movies);
+//   } catch (err) {
+//     res.status(500).json({ message: "Lỗi server", error: err.message });
+//   }
+// };
+
 const getMovies = async (req, res) => {
   try {
-    // Nhận tham số status và admin_manage từ query string
     const { status, admin_manage } = req.query;
-    const where = {};
+    let where = {};
 
-    // Nếu KHÔNG PHẢI là trang quản lý của Admin (tức là User hoặc ô Thêm suất chiếu)
-    // thì mới áp dụng bộ lọc ẩn phim đã hết hạn
+    // Chỉ khi admin_manage === "true" (Trang quản lý phim) thì mới hiện TẤT CẢ.
+    // Còn lại (User, Admin Thêm suất chiếu) thì bắt buộc phải ẩn phim quá hạn đi.
     if (admin_manage !== "true") {
       const today = new Date().toISOString().slice(0, 10);
-
-      // SỬA CÚ PHÁP ĐÚNG Ở ĐÂY: Gán thuộc tính [Op.or] vào object where
       where[Op.or] = [{ end_date: { [Op.gte]: today } }, { end_date: null }];
     }
 
-    // Lọc theo trạng thái phim nếu phía Client có truyền lên
+    // Lọc theo trạng thái phim (now_showing / coming_soon) nếu phía client yêu cầu
     if (status) {
       where.status = status;
     }
@@ -30,7 +58,7 @@ const getMovies = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    res.json(movies);
+    res.json(movies || []);
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }

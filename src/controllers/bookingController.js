@@ -17,9 +17,6 @@ const createBooking = async (req, res) => {
 
   try {
     const { showtime_id, seat_ids, food_items } = req.body;
-    // seat_ids:   [1, 2, 3]
-    // food_items: [{ food_id: 1, quantity: 2 }, { food_id: 2, quantity: 1 }]
-
     // 1. Kiểm tra suất chiếu tồn tại
     const showtime = await Showtime.findByPk(showtime_id, {
       include: [{ model: Movie, attributes: ["title"] }],
@@ -215,49 +212,6 @@ const getBookingById = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
-
-// Huỷ vé - Đã loại bỏ logic cập nhật bảng Seat
-// const cancelBooking = async (req, res) => {
-//   const t = await sequelize.transaction();
-//   try {
-//     const { id } = req.params;
-
-//     const booking = await Booking.findOne({
-//       where: { id, user_id: req.user.id },
-//       include: [{ model: Seat }, { model: Showtime }],
-//     });
-
-//     if (!booking) {
-//       await t.rollback();
-//       return res.status(404).json({ message: "Không tìm thấy vé" });
-//     }
-
-//     if (booking.Showtime) {
-//       const now = new Date();
-//       const startTime = new Date(booking.Showtime.start_time);
-
-//       if (startTime - now < 3600000) {
-//         await t.rollback();
-//         return res
-//           .status(400)
-//           .json({ message: "Không thể hủy vé trước giờ chiếu 1 tiếng" });
-//       }
-//     }
-
-//     // 1. Xóa các bảng liên quan (Payment...)
-//     await Payment.destroy({ where: { booking_id: id }, transaction: t });
-
-//     // 2. Xóa vé (Lúc này các ghế liên kết trong bảng trung gian sẽ tự động rời ra)
-//     await booking.destroy({ transaction: t });
-
-//     await t.commit();
-//     res.json({ message: "Hủy vé thành công" });
-//   } catch (err) {
-//     if (t) await t.rollback();
-//     console.error("Lỗi chi tiết tại Server:", err);
-//     res.status(500).json({ message: "Lỗi server", error: err.message });
-//   }
-// };
 
 // Lấy tất cả booking (admin)
 const getAllBookings = async (req, res) => {
